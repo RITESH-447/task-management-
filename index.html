@@ -1,0 +1,210 @@
+# ==============================
+# TASK MANAGEMENT APP AUTO SETUP
+# ==============================
+
+$ProjectName = "TaskManagementApp"
+$GitHubUser = (gh api user --jq .login)
+
+mkdir $ProjectName -ErrorAction SilentlyContinue
+cd $ProjectName
+
+@'
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Manager</title>
+
+<style>
+body{
+font-family:Arial,sans-serif;
+background:#121212;
+color:white;
+max-width:900px;
+margin:auto;
+padding:20px;
+}
+
+input,button{
+padding:10px;
+margin:5px;
+}
+
+.task{
+background:#1f1f1f;
+padding:12px;
+margin:10px 0;
+border-radius:8px;
+}
+
+.done{
+text-decoration:line-through;
+color:lightgreen;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Task Management Application</h1>
+
+<input id="username" placeholder="Username">
+<button onclick="login()">Login</button>
+
+<hr>
+
+<div id="app" style="display:none;">
+
+<input id="taskInput" placeholder="New Task">
+<button onclick="addTask()">Add Task</button>
+
+<div id="tasks"></div>
+
+</div>
+
+<script>
+
+let currentUser="";
+
+function login(){
+
+currentUser=document.getElementById("username").value;
+
+if(!currentUser){
+alert("Enter username");
+return;
+}
+
+localStorage.setItem("currentUser",currentUser);
+
+document.getElementById("app").style.display="block";
+
+loadTasks();
+
+}
+
+function getTasks(){
+return JSON.parse(
+localStorage.getItem("tasks_"+currentUser) || "[]"
+);
+}
+
+function saveTasks(tasks){
+localStorage.setItem(
+"tasks_"+currentUser,
+JSON.stringify(tasks)
+);
+}
+
+function addTask(){
+
+let text=document.getElementById("taskInput").value;
+
+if(!text) return;
+
+let tasks=getTasks();
+
+tasks.push({
+text:text,
+done:false
+});
+
+saveTasks(tasks);
+
+document.getElementById("taskInput").value="";
+
+loadTasks();
+}
+
+function toggleTask(index){
+
+let tasks=getTasks();
+
+tasks[index].done=!tasks[index].done;
+
+saveTasks(tasks);
+
+loadTasks();
+}
+
+function deleteTask(index){
+
+let tasks=getTasks();
+
+tasks.splice(index,1);
+
+saveTasks(tasks);
+
+loadTasks();
+}
+
+function loadTasks(){
+
+let tasks=getTasks();
+
+let html="";
+
+tasks.forEach((task,index)=>{
+
+html+=`
+<div class="task">
+
+<span class="${task.done?'done':''}">
+${task.text}
+</span>
+
+<button onclick="toggleTask(${index})">
+Done
+</button>
+
+<button onclick="deleteTask(${index})">
+Delete
+</button>
+
+</div>
+`;
+
+});
+
+document.getElementById("tasks").innerHTML=html;
+
+}
+
+window.onload=()=>{
+
+let user=localStorage.getItem("currentUser");
+
+if(user){
+
+document.getElementById("username").value=user;
+
+login();
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
+'@ | Set-Content index.html
+
+git init
+
+git add .
+
+git commit -m "Initial Commit"
+
+gh repo create $ProjectName --public --source=. --push
+
+$RepoUrl = "https://github.com/$GitHubUser/$ProjectName"
+
+$RepoUrl | Set-Clipboard
+
+Write-Host ""
+Write-Host "================================="
+Write-Host "GITHUB LINK COPIED TO CLIPBOARD"
+Write-Host $RepoUrl
+Write-Host "================================="
